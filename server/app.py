@@ -18,28 +18,37 @@ migrate = Migrate(app, db)
 
 db.init_app(app)
 
+
 api=Api(app)
 
 class Students(Resource):
     def get(self):
+        # get all students from db
         students = Student.query.all()
+
+        # create list of dictionaries to send a response
         response_body = [student.to_dict(rules=('-subject_enrollments',)) for student in students]
 
         return make_response(jsonify(response_body), 200)
 
+# add resource 
 api.add_resource(Students, '/students')
 
 
 class StudentsById(Resource):
     def get(self, id):
+        # find student by id / 
+        # student = Student.query.get(id)
         student = Student.query.filter(Student.id == id).first()
 
+        # send error if student wasn't found
         if not student:
             response_body = {'error': 'Student not found'}
             return make_response(jsonify(response_body), 404)
 
         return make_response(jsonify(student.to_dict()), 200)
 
+# add resource 
 api.add_resource(StudentsById, '/students/<int:id>')
 
 
@@ -67,21 +76,24 @@ api.add_resource(SubjectsById, '/subjects/<int:id>')
 class SubjectEnrollments(Resource):
     def post(self):
         try:
+            # get data json data from request
             json_data=request.get_json()
 
+            # create new enrollment
             new_enrollment = SubjectEnrollment(
                 enrollment_year=json_data.get('enrollment_year'),
                 student_id=json_data.get('student_id'),
                 subject_id=json_data.get('subject_id')
                 )
             
+            # add new enrollment and commit the session
             db.session.add(new_enrollment)
             db.session.commit()
 
             response_body = new_enrollment.to_dict()
 
             return make_response(jsonify(response_body), 200)
-
+        # raise an error if adding a new enrollment was unsuccessful
         except ValueError:
             response_body = { "errors": ["validation errors"] }
 
@@ -93,12 +105,15 @@ api.add_resource(SubjectEnrollments, '/subject_enrollments')
 class SubjectEnrollmentsById(Resource):
     def delete(self, id):
 
+        # find enrollment
         subject_enrollment  = SubjectEnrollment.query.get(id)
 
+        # send error if not found
         if not subject_enrollment:
             response_body = {'error': 'Subject Enrollment not found'}
             return make_response(jsonify(response_body), 404)
 
+        # id enrollment was found delete it and commit the session
         db.session.delete(subject_enrollment)
         db.session.commit()
 
